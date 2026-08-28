@@ -731,7 +731,7 @@ async function aiComplete(system: string, user: string, maxTokens: number): Prom
   return complete(cfg, { system, user, maxTokens, json: true })
 }
 
-async function callClaudeOnce(_apiKey: string, semgrep: unknown[], gitleaks: unknown[], osv: OsvFinding[], batchLabel: string): Promise<AnalysisResult> {
+async function callClaudeOnce(semgrep: unknown[], gitleaks: unknown[], osv: OsvFinding[], batchLabel: string): Promise<AnalysisResult> {
   const slimOsv = osv.map(f => ({
     package: f.package, version: f.version, ecosystem: f.ecosystem,
     cve: f.aliases.find(a => a.startsWith('CVE-')) ?? f.ids[0],
@@ -765,7 +765,7 @@ function mergeAnalysisResults(results: AnalysisResult[]): AnalysisResult {
   return { securityScore, summary: results[0].summary, criticalCount, highCount, mediumCount, lowCount, findings: allFindings, complianceIssues }
 }
 
-async function refineSummaryAndScore(apiKey: string, merged: AnalysisResult): Promise<AnalysisResult> {
+async function refineSummaryAndScore(merged: AnalysisResult): Promise<AnalysisResult> {
   const sample = merged.findings.slice(0, 12).map(f => `[${f.severity.toUpperCase()}] ${f.title}`).join('\n')
   const prompt = `Security scan results for a codebase:
 Critical: ${merged.criticalCount} | High: ${merged.highCount} | Medium: ${merged.mediumCount} | Low: ${merged.lowCount}
@@ -821,7 +821,7 @@ async function analyzeWithClaude(semgrepFindings: unknown[], gitleaksFindings: u
     const gBatch = dedupGitleaks.slice(i * G_BATCH, (i + 1) * G_BATCH)
     const oBatch = osvFindings.slice(i * O_BATCH, (i + 1) * O_BATCH)
     const label = totalBatches > 1 ? ` (batch ${i + 1} of ${totalBatches})` : ''
-    return callClaudeOnce(apiKey, sBatch, gBatch, oBatch, label)
+    return callClaudeOnce(sBatch, gBatch, oBatch, label)
   })
 
   // 3. Run 2 batches at a time — faster than sequential, safe under 30K TPM limit
@@ -829,7 +829,7 @@ async function analyzeWithClaude(semgrepFindings: unknown[], gitleaksFindings: u
   const merged = mergeAnalysisResults(results)
 
   // 4. Single fast summary pass to get a holistic score and executive summary
-  if (totalBatches > 1) return refineSummaryAndScore(apiKey, merged)
+  if (totalBatches > 1) return refineSummaryAndScore(merged)
   return merged
 }
 
