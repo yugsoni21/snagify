@@ -1,104 +1,137 @@
+<div align="center">
+
+<img src="resources/icon.png" width="96" height="96" alt="Snagify icon" />
+
 # Snagify
 
-**One command. Three scanners. One score.**
+**Scan your code for vulnerabilities, secrets, and vulnerable dependencies — in one click.**
 
-Snagify wraps [Semgrep](https://semgrep.dev) (code vulnerabilities), [Gitleaks](https://github.com/gitleaks/gitleaks) (secrets), and [OSV-Scanner](https://github.com/google/osv-scanner) (dependency CVEs) behind a single CLI and desktop app — then uses Claude to triage the combined output into one ranked list with fix suggestions, instead of three separate tools with three separate formats you have to cross-reference by hand.
+Snagify is a desktop app that runs three security scanners at once, then uses AI to turn the results into one clear score with plain-English explanations and one-click fixes.
 
-```
-$ snagify --scan .
+[**⬇ Download for macOS**](#-download) · [**⬇ Download for Windows**](#-download) · [Set up in 2 minutes](#-set-up-2-minutes)
 
-Snagify Security Scan
-Project: /Users/you/my-app
+</div>
 
-  Code findings           4
-  Secrets                 1
-  Vulnerable dependencies 7
+---
 
-  Security score          62/100
+## What you get
 
-  Top findings:
-   [CRITICAL] Hardcoded AWS secret key            (src/config.js:12)
-   [HIGH    ] SQL injection via string concat     (src/db.js:44)
-   [HIGH    ] tar 6.2.1 — CVE-2026-24842          (package-lock.json)
-   ...
-```
+| | |
+|---|---|
+| 🛡️ **One security score** | Runs Semgrep, Gitleaks, and OSV-Scanner together and merges the results into a single 0–100 score |
+| 🔑 **Secret detection** | Finds hardcoded API keys, passwords, and tokens before they leak |
+| 📦 **Dependency CVEs** | Flags vulnerable packages with the exact version that fixes them |
+| 🧠 **AI explanations** | Every finding gets a plain-English "why this matters" and a concrete fix |
+| 🩹 **One-click patches** | Preview an AI-generated fix as a diff, apply it, undo it if you don't like it |
+| 📈 **Scan history** | Track your score over time — see "3 fixed, 1 new" after every re-scan |
+| 📄 **PDF reports** | Export a polished, shareable report — with your own logo, if you want |
+| 🚀 **Scalability check** | Finds what will break under real-world load, not just what's insecure today |
 
-## Why
+---
 
-You already have Semgrep, Gitleaks, and a dependency scanner in your toolbox — running them separately, reading three JSON formats, and manually prioritizing across them is the actual friction. Snagify runs all three, deduplicates and normalizes the output, and (optionally) sends it to Claude for a single security score, an executive summary, and concrete per-finding fixes mapped to CWE/OWASP.
+## 📥 Download
 
-## Install
+> **Snagify is early — releases aren't published yet.** Until then, build it yourself in about 2 minutes (see [Set up](#-set-up-2-minutes) below). Once a release is published, it will appear on the [**Releases page**](https://github.com/yugsoni21/snagify/releases) as a `.dmg` (macOS) or installer (Windows) — no building required.
 
-```sh
-brew install snagify        # macOS (coming soon)
-npm install -g snagify-cli  # cross-platform (coming soon)
-```
+---
 
-Or build from source — see [Development](#development) below.
+## 🚀 Set up (2 minutes)
 
-## Usage
+You'll need [Node.js](https://nodejs.org) (v18 or newer) installed. That's it.
 
-```sh
-snagify --scan <path>                # human-readable report
-snagify --scan <path> --json         # machine-readable, full findings
-snagify --scan <path> --min-score 80 # exit 1 if score is below 80 — for CI
-snagify --scan <path> --no-ai        # skip AI triage, use deterministic scoring
-```
-
-### Pre-commit hook
+### 1. Get the code
 
 ```sh
-snagify --install-hook <repo> --min-score 60
+git clone https://github.com/yugsoni21/snagify.git
+cd snagify
 ```
 
-Blocks commits when the security score drops below the threshold. Bypass once with `git commit --no-verify`.
+### 2. Install and run
+
+```sh
+npm install
+npm run dev
+```
+
+The app window opens automatically. That's the whole setup.
+
+### 3. Add your AI key (optional, but recommended)
+
+Without a key, Snagify still scans and gives you a raw list of findings. With a key, it adds a single score, plain-English explanations, one-click fixes, and load-testing insight.
+
+Open **Settings → AI Provider** in the app and pick one:
+
+| Provider | Where to get a key |
+|---|---|
+| **Anthropic (Claude)** | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| **OpenAI (GPT)** | [platform.openai.com](https://platform.openai.com/api-keys) |
+| **Google (Gemini)** | [aistudio.google.com](https://aistudio.google.com/apikey) — has a free tier |
+| **Ollama (local)** | [ollama.com](https://ollama.com/download) — no key needed, nothing leaves your machine |
+
+Paste your key in, hit **Test**, and you're done.
+
+### That's it — scan something
+
+Click **New Scan**, pick a project folder, and watch the results come in.
+
+---
+
+## 📦 Building an installer yourself
+
+If you'd rather have a proper `.app` / installer instead of running in dev mode:
+
+```sh
+npm run package:mac    # macOS — creates a .dmg in dist-electron/
+npm run package:win    # Windows — creates a setup .exe in dist-electron/
+```
+
+> **macOS note:** the app isn't code-signed yet, so on first launch macOS will say it "cannot be opened" or is from an "unidentified developer." Right-click the app → **Open** → **Open** again. You only need to do this once.
+
+---
+
+## 🧑‍💻 For developers: the CLI
+
+Snagify also ships as a standalone command-line tool — same three scanners, same AI analysis, runs anywhere (including CI). See [`cli/README.md`](cli/README.md) for the full guide, or the short version:
+
+```sh
+cd cli && npm install && npm run build && npm install -g .
+snagify scan .
+```
 
 ### GitHub Action
 
 ```yaml
-- uses: snagify/snagify-action@v1
+- uses: yugsoni21/snagify@v1
   with:
     path: .
     min-score: 70
 ```
 
-Runs Semgrep + Gitleaks + OSV-Scanner in a container, posts a summary to the job, and fails the build below the threshold. See [action.yml](action.yml).
+Runs Semgrep + Gitleaks + OSV-Scanner in CI and fails the build below your threshold. See [`action.yml`](action.yml).
 
-### Desktop app
-
-The desktop app (macOS/Windows, built on Electron) adds AI-powered fix patches you can preview and apply with one click, scan history with trend comparison ("3 fixed, 1 new since last scan"), false-positive suppression, and PDF report export.
-
-### Scalability analysis
-
-Static scanners tell you what is insecure; they say nothing about what falls over under load. Snagify also reviews the load-bearing files in your project and reports a **load-readiness score** with concrete bottlenecks — unpaginated queries, in-memory state that breaks across instances, blocking work in request handlers, missing rate limits — each with what specifically happens as usage grows and how to fix it.
+---
 
 ## What it scans
 
 | Engine | Catches | License |
 |---|---|---|
-| [Semgrep](https://semgrep.dev) | Injection, auth bypass, insecure crypto, 1,000+ rules | LGPL 2.1 |
+| [Semgrep](https://semgrep.dev) | Injection, auth bypass, insecure crypto — 1,000+ rules | LGPL 2.1 |
 | [Gitleaks](https://github.com/gitleaks/gitleaks) | Hardcoded secrets, API keys, credentials | MIT |
-| [OSV-Scanner](https://github.com/google/osv-scanner) | Known CVEs in your dependencies (npm, pip, Go, Rust, Maven, ...) | Apache 2.0 |
+| [OSV-Scanner](https://github.com/google/osv-scanner) | Known CVEs in your dependencies (npm, pip, Go, Rust, Maven…) | Apache 2.0 |
 
-AI triage (optional, requires an Anthropic API key) consolidates findings into a single score, deduplicates cross-tool noise, and writes fix suggestions.
+Plus a deep AI review pass that catches what pattern scanners structurally can't — missing authorization checks, business-logic flaws, and security controls that exist in code but are never actually called.
 
-## Development
+---
 
-```sh
-git clone https://github.com/snagify/snagify
-cd snagify
-npm install
-npm run dev        # desktop app, dev mode
-npm run build       # production build
-```
+## 🔒 Privacy
 
-Requires `semgrep`, `gitleaks`, and `osv-scanner` on your PATH (or in `resources/binaries/`) for local scanning.
+- Semgrep's default ruleset fetches rules from its public registry — **no code is uploaded** to run a scan.
+- AI features send finding details and relevant code snippets to whichever provider you choose, and **only when you configure one**.
+- Choose **Ollama** and nothing ever leaves your machine — not even metadata.
+- Your API key is stored encrypted via your OS's keychain, never in plain text.
 
-## Privacy
-
-Semgrep's default ruleset (`--config=auto`) fetches rules from Semgrep's public registry over the network — no code is uploaded. AI triage sends only the deduplicated, slimmed finding metadata (rule ID, file, line, message) to the Anthropic API — never full source files — and only when you provide an API key. Everything else runs and stays local.
+---
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-# snagify

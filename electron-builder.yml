@@ -53,6 +53,6 @@ npmRebuild: false
 
 publish:
   provider: github
-  owner: snagify
+  owner: yugsoni21
   repo: snagify
   releaseType: release
