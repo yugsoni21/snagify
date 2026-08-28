@@ -1,0 +1,58 @@
+appId: ca.snagify.app
+productName: Snagify
+directories:
+  buildResources: resources
+  output: dist-electron
+files:
+  - out/**/*
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.*}'
+  - '!{tailwind.config.js,postcss.config.js}'
+extraResources:
+  - from: resources/binaries
+    to: binaries
+    filter:
+      - '**/*'
+asarUnpack:
+  - resources/**
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  icon: resources/icon.icns
+  category: public.app-category.developer-tools
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}-${arch}.${ext}
+  sign: false
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/icon.ico
+  executableName: Snagify
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+
+npmRebuild: false
+
+publish:
+  provider: github
+  owner: snagify
+  repo: snagify
+  releaseType: release

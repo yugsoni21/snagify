@@ -1,0 +1,12 @@
+# Build artifacts — compiled output is not source code
+dist-electron/
+dist/
+out/
+build/
+
+# Dependencies
+node_modules/
+
+# Electron framework internals — contain Chromium test certificates (false positives)
+*.pak
+*.asar

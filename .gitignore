@@ -1,0 +1,16 @@
+node_modules/
+out/
+dist-electron/
+.DS_Store
+
+# Bundled binaries (download separately — see RESOURCES.md)
+resources/binaries/mac/
+resources/binaries/win/
+
+# Keep the placeholder file so the directory is tracked
+!resources/binaries/.gitkeep
+
+# CLI build output
+cli/dist/
+cli/node_modules/
+cli/*.tgz

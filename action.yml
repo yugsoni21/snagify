@@ -1,0 +1,33 @@
+name: 'Snagify Scan'
+description: 'Scan for vulnerabilities, secrets, and vulnerable dependencies with Semgrep + Gitleaks + OSV-Scanner'
+author: 'Snagify'
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  path:
+    description: 'Path to scan, relative to the repo root'
+    required: false
+    default: '.'
+  min-score:
+    description: 'Fail the job if the security score falls below this (0-100). Leave empty to never fail.'
+    required: false
+    default: ''
+
+outputs:
+  score:
+    description: 'Security score (0-100)'
+  code-findings:
+    description: 'Number of Semgrep findings'
+  secrets:
+    description: 'Number of Gitleaks findings'
+  vulnerable-dependencies:
+    description: 'Number of vulnerable dependencies found by OSV-Scanner'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.path }}
+    - ${{ inputs.min-score }}

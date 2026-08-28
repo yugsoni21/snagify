@@ -1,0 +1,53 @@
+{
+  "name": "snagify",
+  "version": "1.0.0",
+  "description": "One command, three scanners: Semgrep + Gitleaks + OSV with AI triage, security scoring, and scalability analysis",
+  "type": "module",
+  "bin": {
+    "snagify": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "dev": "tsc --watch",
+    "test": "npm run build && node --test test/",
+    "test:unit": "npm run build && node --test test/unit.test.js",
+    "test:integration": "npm run build && node --test test/integration.test.js"
+  },
+  "keywords": [
+    "security",
+    "sast",
+    "semgrep",
+    "gitleaks",
+    "osv",
+    "sca",
+    "cve",
+    "secrets",
+    "scanner",
+    "cli",
+    "devsecops",
+    "vulnerability",
+    "scalability"
+  ],
+  "author": "Snagify",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/snagify/snagify.git",
+    "directory": "cli"
+  },
+  "homepage": "https://snagify.ca",
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "typescript": "^5.6.3"
+  }
+}

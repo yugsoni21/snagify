@@ -1,0 +1,22 @@
+# Example: how to use the Snagify Action in your own repo.
+# Copy this into .github/workflows/security.yml
+#
+# Third-party actions are pinned to commit SHAs (not mutable tags) so the code
+# running in your pipeline can't change out from under you.
+name: Security scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  snagify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # Pin to a release SHA once snagify-action is published
+      - uses: snagify/snagify-action@v1
+        with:
+          path: .
+          min-score: 70
