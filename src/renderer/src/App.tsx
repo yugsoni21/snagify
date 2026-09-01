@@ -891,11 +891,37 @@ type PatchState =
   | { phase: 'applied'; patch: FixPatch; backupId: string }
   | { phase: 'error'; message: string }
 
-function SectionLabel({ text }: { text: string }): React.ReactElement {
+function SectionLabel({ text, id }: { text: string; id?: string }): React.ReactElement {
   return (
-    <div className="flex items-center gap-2.5 px-1 pt-1">
+    <div id={id} className="flex items-center gap-2.5 px-1 pt-1 scroll-mt-14">
       <span className="text-[10px] font-bold uppercase tracking-widest text-[#4a4a4a] shrink-0">{text}</span>
       <div className="h-px flex-1 bg-[#1a1a1a]" />
+    </div>
+  )
+}
+
+interface JumpNavItem { id: string; label: string; count?: number; color?: string }
+
+/** Sticky pill bar that scrolls a long results page to each named section —
+ *  otherwise a big scan (100+ findings, scalability, deps, ignored) is an
+ *  undiscoverable wall of scroll. */
+function JumpNav({ items }: { items: JumpNavItem[] }): React.ReactElement {
+  const scrollTo = (id: string): void => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  return (
+    <div className="sticky top-0 z-10 -mx-6 px-6 py-2 flex items-center gap-1.5 overflow-x-auto bg-[#0a0a0a]/95 backdrop-blur border-b border-[#181818]">
+      {items.map(it => (
+        <button
+          key={it.id}
+          onClick={() => scrollTo(it.id)}
+          className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-[#8a8a8a] hover:text-[#eeeeee] bg-[#111111] hover:bg-[#181818] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-all"
+        >
+          {it.color && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: it.color }} />}
+          {it.label}
+          {it.count !== undefined && <span className="text-[#4a4a4a] tabular-nums">{it.count}</span>}
+        </button>
+      ))}
     </div>
   )
 }
@@ -1067,10 +1093,15 @@ function AIFindingCard({ finding, folderPath }: { finding: AIFinding; folderPath
   )
 }
 
+const FINDINGS_PAGE_SIZE = 8
+
 function SeveritySection({ severity, findings, folderPath }: { severity: Severity; findings: AIFinding[]; folderPath?: string | null }): React.ReactElement | null {
   const [open, setOpen] = useState(severity === 'critical' || severity === 'high')
+  const [shown, setShown] = useState(FINDINGS_PAGE_SIZE)
   const cfg = SEVERITY_CONFIG[severity]
   if (!findings.length) return null
+  const visible = findings.slice(0, shown)
+  const remaining = findings.length - visible.length
   return (
     <div className="rounded-xl border border-[#1e1e1e] overflow-hidden">
       <button onClick={() => setOpen(v => !v)} className="w-full flex items-center gap-3 px-4 py-3 bg-[#0f0f0f] hover:bg-[#111111] transition-colors">
@@ -1079,7 +1110,24 @@ function SeveritySection({ severity, findings, folderPath }: { severity: Severit
         <span className="text-[11px] font-mono tabular-nums" style={{ color: cfg.color }}>{findings.length}</span>
         <span className={`text-[#3a3a3a] transition-transform duration-150 ${open ? 'rotate-180' : ''}`}><IconChevronDown /></span>
       </button>
-      {open && <div className="px-4 pb-4 pt-2 space-y-3 bg-[#0a0a0a]">{findings.map(f => <AIFindingCard key={f.id} finding={f} folderPath={folderPath} />)}</div>}
+      {open && (
+        <div className="px-4 pb-4 pt-2 space-y-3 bg-[#0a0a0a]">
+          {visible.map(f => <AIFindingCard key={f.id} finding={f} folderPath={folderPath} />)}
+          {remaining > 0 && (
+            <button
+              onClick={() => setShown(n => n + 25)}
+              className="w-full py-2.5 rounded-lg text-[12px] font-semibold text-[#8a8a8a] hover:text-[#eeeeee] bg-[#111111] hover:bg-[#181818] border border-[#1e1e1e] hover:border-[#2a2a2a] transition-all"
+            >
+              Show {Math.min(remaining, 25)} more ({remaining} left)
+            </button>
+          )}
+          {shown > FINDINGS_PAGE_SIZE && (
+            <button onClick={() => setShown(FINDINGS_PAGE_SIZE)} className="w-full py-1.5 text-[11px] font-medium text-[#4a4a4a] hover:text-[#8a8a8a] transition-colors">
+              Show fewer
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -1122,14 +1170,26 @@ function AIAnalysisPanel({ analysis, folderPath }: { analysis: AnalysisResult; f
 
       {/* Findings box */}
       {analysis.findings.length > 0 ? (
-        <div className="rounded-xl border border-[#1e1e1e] bg-[#0f0f0f] overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#181818] flex items-center gap-2">
+        <div id="findings" className="rounded-xl border border-[#1e1e1e] bg-[#0f0f0f] overflow-hidden scroll-mt-14">
+          <div className="px-4 py-3 border-b border-[#181818] flex items-center gap-2 flex-wrap">
             <span className="text-[#5e6ad2]"><IconFile /></span>
             <p className="text-[11px] font-semibold text-[#eeeeee] uppercase tracking-widest">Findings</p>
-            <span className="ml-auto text-[11px] font-mono text-[#5a5a5a] tabular-nums">{analysis.findings.length}</span>
+            <span className="text-[11px] font-mono text-[#5a5a5a] tabular-nums">{analysis.findings.length}</span>
+            {/* Jump straight to a severity when the list is long */}
+            <div className="ml-auto flex items-center gap-1">
+              {(['critical', 'high', 'medium', 'low'] as Severity[]).filter(sev => bySev[sev].length > 0).map(sev => {
+                const cfg = SEVERITY_CONFIG[sev]
+                return (
+                  <a key={sev} href={`#findings-${sev}`} onClick={e => { e.preventDefault(); document.getElementById(`findings-${sev}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}
+                    className="px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums cursor-pointer" style={{ color: cfg.color, backgroundColor: cfg.bg }}>
+                    {bySev[sev].length}
+                  </a>
+                )
+              })}
+            </div>
           </div>
           <div className="p-3 space-y-3">
-            {(['critical', 'high', 'medium', 'low'] as Severity[]).map(sev => <SeveritySection key={sev} severity={sev} findings={bySev[sev]} folderPath={folderPath} />)}
+            {(['critical', 'high', 'medium', 'low'] as Severity[]).map(sev => <div key={sev} id={`findings-${sev}`} className="scroll-mt-14"><SeveritySection severity={sev} findings={bySev[sev]} folderPath={folderPath} /></div>)}
           </div>
         </div>
       ) : (
@@ -1677,6 +1737,12 @@ function HistoryScanDetailView({
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        {(analysis.findings.length > 0 || analysis.scalability) && (
+          <JumpNav items={[
+            ...(analysis.findings.length > 0 ? [{ id: 'findings', label: 'Findings', count: analysis.findings.length, color: '#ef4444' }] : []),
+            ...(analysis.scalability ? [{ id: 'scalability', label: 'Load readiness', count: analysis.scalability.scalabilityScore, color: '#38bdf8' }] : [])
+          ]} />
+        )}
         {/* Folder path */}
         <div className="rounded-xl border border-[#1e1e1e] bg-[#0f0f0f] px-4 py-3 flex items-center gap-2.5">
           <span className="text-[#3a3a3a] shrink-0"><IconFolder size={14} /></span>
@@ -1685,7 +1751,7 @@ function HistoryScanDetailView({
 
         <SectionLabel text="AI Security Analysis" />
         <AIAnalysisPanel analysis={analysis} folderPath={entry.folderPath} />
-        {analysis.scalability && <><SectionLabel text="Scalability Analysis" /><ScalabilityPanel scalability={analysis.scalability} /></>}
+        {analysis.scalability && <><SectionLabel text="Scalability Analysis" id="scalability" /><ScalabilityPanel scalability={analysis.scalability} /></>}
         <div className="h-1" />
       </div>
     </div>
@@ -1936,11 +2002,20 @@ function ScanResultView({ result, folderPath, onBack, onNewScan }: {
     }
   }, [result.analysis, folderName, copying])
 
+  const navItems: JumpNavItem[] = [
+    { id: 'overview', label: 'Overview' },
+    ...(result.analysis && result.analysis.findings.length > 0 ? [{ id: 'findings', label: 'Findings', count: result.analysis.findings.length, color: '#ef4444' }] : []),
+    ...(result.analysis?.scalability ? [{ id: 'scalability', label: 'Load readiness', count: result.analysis.scalability.scalabilityScore, color: '#38bdf8' }] : []),
+    ...(osvFindings.length > 0 ? [{ id: 'dependencies', label: 'Dependencies', count: osvFindings.length, color: '#a78bfa' }] : []),
+    ...(suppressions.length > 0 ? [{ id: 'ignored', label: 'Ignored', count: suppressions.length }] : [])
+  ]
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {toast && <Toast toast={toast} onDismiss={() => setToast(null)} />}
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-        <SectionLabel text="Overview" />
+        {navItems.length > 1 && <JumpNav items={navItems} />}
+        <SectionLabel text="Overview" id="overview" />
         <div className="rounded-xl border border-[#1e1e1e] bg-[#0f0f0f] overflow-hidden">
           <div className="px-4 py-3.5 border-b border-[#181818] flex items-center gap-3">
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${totalFindings > 0 ? 'bg-[#7f1d1d]/20 border-[#ef4444]/20 text-[#ef4444]' : 'bg-[#166534]/20 border-[#16a34a]/20 text-[#16a34a]'}`}><IconShield /></div>
@@ -1989,10 +2064,10 @@ function ScanResultView({ result, folderPath, onBack, onNewScan }: {
           </div>
         </div>
         {result.analysis && <><SectionLabel text="AI Security Analysis" /><AIAnalysisPanel analysis={result.analysis} folderPath={folderPath} /></>}
-        {result.analysis?.scalability && <><SectionLabel text="Scalability Analysis" /><ScalabilityPanel scalability={result.analysis.scalability} /></>}
+        {result.analysis?.scalability && <><SectionLabel text="Scalability Analysis" id="scalability" /><ScalabilityPanel scalability={result.analysis.scalability} /></>}
         {osvFindings.length > 0 && (
           <>
-          <SectionLabel text="Vulnerable Dependencies" />
+          <SectionLabel text="Vulnerable Dependencies" id="dependencies" />
           <div className="rounded-xl border border-[#1e1e1e] bg-[#0f0f0f] overflow-hidden">
             <button onClick={() => setDepsOpen(o => !o)} className="w-full px-4 py-3 flex items-center gap-2.5 hover:bg-[#131313] transition-colors">
               <span className="text-[#a78bfa]"><IconPackage /></span>
@@ -2026,7 +2101,7 @@ function ScanResultView({ result, folderPath, onBack, onNewScan }: {
         )}
         {suppressions.length > 0 && (
           <>
-          <SectionLabel text="Ignored Findings" />
+          <SectionLabel text="Ignored Findings" id="ignored" />
           <div className="rounded-xl border border-[#1e1e1e] bg-[#0f0f0f] overflow-hidden">
             <button onClick={handleToggleIgnored} className="w-full px-4 py-3 flex items-center gap-2.5 hover:bg-[#131313] transition-colors">
               <span className="text-[#3a3a3a]"><IconX /></span>
