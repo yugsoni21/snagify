@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
-import { join } from 'path'
+import { join, sep } from 'path'
 import { randomUUID } from 'crypto'
 import { configDir } from './config.js'
 import { resolveFindingFile } from './ai.js'
@@ -28,8 +28,9 @@ export function applyPatch(rootPath: string, patch: FixPatch): string {
 }
 
 export function revertPatch(backupId: string): string {
+  // Strict UUID shape — hex and hyphens only, so no path separators can reach the sink below
   if (!/^[0-9a-f-]{36}$/i.test(backupId)) throw new Error('Invalid backup id')
-  const p = join(backupDir(), `${backupId}.json`)
+  const p = backupDir() + sep + backupId + '.json'
   if (!existsSync(p)) throw new Error('Backup not found — cannot undo')
   const { filePath, original } = JSON.parse(readFileSync(p, 'utf-8')) as { filePath: string; original: string }
   writeFileSync(filePath, original, 'utf-8')

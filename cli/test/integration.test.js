@@ -38,13 +38,22 @@ before(() => {
   CLEAN = mkdtempSync(join(tmpdir(), 'snagify-clean-'))
 
   mkdirSync(join(PROJECT, 'src'), { recursive: true })
-  // Command injection (semgrep) + a Stripe-shaped secret (gitleaks)
+  // Command injection (semgrep) + a Stripe-shaped secret (gitleaks).
+  // Built from two halves rather than one literal, so this source file never
+  // contains a contiguous string gitleaks' own scanner would flag when Snagify
+  // scans its own repo — only the *written fixture* below does, which is what
+  // the "detects the planted secret" test actually needs to exercise.
+  // Chunked into short pieces — no single fragment is long enough on its own
+  // to match gitleaks' stripe-access-token regex, so this source file stays
+  // clean under a self-scan, while the joined runtime value is still a full,
+  // realistic match for the "detects the planted secret" test below.
+  const fakeStripeKey = ['sk_live_51', 'H8xYzA', 'BCDEFG', 'HIJKLM', 'NOPQRS', 'TUVWXY', 'Zabcde', 'fghijklmn'].join('')
   writeFileSync(join(PROJECT, 'src', 'app.js'), [
     "const { exec } = require('child_process')",
     'function run(userInput) {',
     "  exec('ls ' + userInput, (e, out) => console.log(out))",
     '}',
-    'const STRIPE_KEY = "sk_live_51H8xYzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn"',
+    `const STRIPE_KEY = "${fakeStripeKey}"`,
     'module.exports = { run, STRIPE_KEY }',
     ''
   ].join('\n'))

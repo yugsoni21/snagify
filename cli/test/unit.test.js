@@ -252,7 +252,7 @@ describe('rawAsFindings', () => {
 describe('reporters', () => {
   const withSecret = scanResult({
     secrets: { ok: true, skipped: false, error: null, findings: [
-      { Description: 'Stripe', File: 'c.js', StartLine: 5, RuleID: 'stripe', Secret: 'sk_live_SUPERSECRET' }
+      { Description: 'Stripe', File: 'c.js', StartLine: 5, RuleID: 'stripe', Secret: 'sk_live_SUPERSECRET' } // gitleaks:allow — mock data for testing our own redaction logic, not a real key
     ] }
   })
 

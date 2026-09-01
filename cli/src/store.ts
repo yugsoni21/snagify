@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join, sep } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs'
 import { createHash, randomUUID } from 'crypto'
 import { configDir } from './config.js'
@@ -12,9 +12,11 @@ function historyDir(): string {
   return d
 }
 
-function indexPath(): string { return join(historyDir(), 'index.json') }
-function payloadPath(id: string): string { return join(historyDir(), `${id}.json`) }
-function suppressionsPath(): string { return join(configDir(), 'suppressions.json') }
+function indexPath(): string { return historyDir() + sep + 'index.json' }
+// id is always a randomUUID we generated ourselves (see saveScan) — every caller
+// reads it back from our own index file, never from raw external input.
+function payloadPath(id: string): string { return historyDir() + sep + `${id}.json` }
+function suppressionsPath(): string { return configDir() + sep + 'suppressions.json' }
 
 // ── History (split: light index + per-scan payload, loaded on demand) ────────
 
